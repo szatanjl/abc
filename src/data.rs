@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use serde::Serialize;
 use thiserror::Error;
-use super::bounded_multi_set::BoundedMultiSet;
+use super::{
+    bounded_multi_set::BoundedMultiSet,
+    bounded_prefix_sums::BoundedPrefixSums,
+};
 
 #[derive(Default)]
 pub struct DataPoints(HashMap<String, DataPointsInner>);
@@ -35,6 +38,7 @@ impl DataPoints {
 struct DataPointsInner {
     sets: [BoundedMultiSet; 8],
     last: Option<f64>,
+    prefix_sums: BoundedPrefixSums,
 }
 
 impl Default for DataPointsInner {
@@ -51,6 +55,7 @@ impl Default for DataPointsInner {
                 BoundedMultiSet::new(100_000_000),
             ],
             last: None,
+            prefix_sums: BoundedPrefixSums::new(100_000_000),
         }
     }
 }
@@ -61,6 +66,7 @@ impl DataPointsInner {
             for set in &mut self.sets {
                 set.insert(*value);
             }
+            self.prefix_sums.push(*value);
         }
         self.last = values.last().copied();
     }
@@ -69,11 +75,13 @@ impl DataPointsInner {
         if k <= 0 || k > 8 {
             return Err(InvalidParams);
         }
+        let n = 10usize.pow(u32::from(k));
         let k = usize::from(k - 1);
         Ok(Stats {
             min: self.sets[k].min(),
             max: self.sets[k].max(),
             last: self.last,
+            avg: self.prefix_sums.get_sum(n).map(|(v, n)| v / (n as f64)),
             ..Stats::default()
         })
     }
