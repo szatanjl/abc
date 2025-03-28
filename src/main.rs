@@ -1,3 +1,4 @@
+mod bounded_multi_set;
 mod data;
 
 use std::sync::{Arc, RwLock};

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use serde::Serialize;
 use thiserror::Error;
+use super::bounded_multi_set::BoundedMultiSet;
 
 #[derive(Default)]
 pub struct DataPoints(HashMap<String, DataPointsInner>);
@@ -31,19 +32,45 @@ impl DataPoints {
     }
 }
 
-#[derive(Default)]
-struct DataPointsInner {}
+struct DataPointsInner {
+    sets: [BoundedMultiSet; 8],
+}
+
+impl Default for DataPointsInner {
+    fn default() -> Self {
+        Self {
+            sets: [
+                BoundedMultiSet::new(10),
+                BoundedMultiSet::new(100),
+                BoundedMultiSet::new(1_000),
+                BoundedMultiSet::new(10_000),
+                BoundedMultiSet::new(100_000),
+                BoundedMultiSet::new(1_000_000),
+                BoundedMultiSet::new(10_000_000),
+                BoundedMultiSet::new(100_000_000),
+            ],
+        }
+    }
+}
 
 impl DataPointsInner {
     fn add(&mut self, values: &[f64]) {
-        println!("ADD {:?}", values);
+        for value in values {
+            for set in &mut self.sets {
+                set.insert(*value);
+            }
+        }
     }
 
     fn get(&self, k: u8) -> Result<Stats, InvalidParams> {
         if k <= 0 || k > 8 {
             return Err(InvalidParams);
         }
-        println!("GET {}", k);
-        Ok(Stats::default())
+        let k = usize::from(k - 1);
+        Ok(Stats {
+            min: self.sets[k].min(),
+            max: self.sets[k].max(),
+            ..Stats::default()
+        })
     }
 }
