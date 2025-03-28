@@ -39,6 +39,7 @@ struct DataPointsInner {
     sets: [BoundedMultiSet; 8],
     last: Option<f64>,
     prefix_sums: BoundedPrefixSums,
+    prefix_sums2: BoundedPrefixSums,
 }
 
 impl Default for DataPointsInner {
@@ -56,6 +57,7 @@ impl Default for DataPointsInner {
             ],
             last: None,
             prefix_sums: BoundedPrefixSums::new(100_000_000),
+            prefix_sums2: BoundedPrefixSums::new(100_000_000),
         }
     }
 }
@@ -67,6 +69,7 @@ impl DataPointsInner {
                 set.insert(*value);
             }
             self.prefix_sums.push(*value);
+            self.prefix_sums2.push(*value * *value);
         }
         self.last = values.last().copied();
     }
@@ -77,12 +80,23 @@ impl DataPointsInner {
         }
         let n = 10usize.pow(u32::from(k));
         let k = usize::from(k - 1);
+        let avg = self.prefix_sums.get_sum(n).map(|(v, n)| v / (n as f64));
+        let var = {
+            if let Some(avg) = avg {
+                let (sum, n1) = self.prefix_sums.get_sum(n).unwrap_or((0.0, 1));
+                let (sum2, n2) = self.prefix_sums2.get_sum(n).unwrap_or((0.0, 1));
+                assert_eq!(n1, n2);
+                Some(avg * avg + (sum2 - 2.0 * avg * sum) / (n1 as f64))
+            } else {
+                None
+            }
+        };
         Ok(Stats {
             min: self.sets[k].min(),
             max: self.sets[k].max(),
             last: self.last,
-            avg: self.prefix_sums.get_sum(n).map(|(v, n)| v / (n as f64)),
-            ..Stats::default()
+            avg,
+            var,
         })
     }
 }
