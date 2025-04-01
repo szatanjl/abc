@@ -1,4 +1,5 @@
 mod bounded_multi_set;
+mod bounded_prefix_sums;
 mod data;
 
 use std::sync::{Arc, RwLock};
