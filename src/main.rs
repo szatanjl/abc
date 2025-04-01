@@ -17,7 +17,7 @@ async fn add_batch(
     Json(values): Json<Vec<f64>>,
 ) {
     let mut data = data.write().unwrap();
-    data.add(&symbol, &values);
+    data.add(symbol, &values);
 }
 
 async fn stats(
