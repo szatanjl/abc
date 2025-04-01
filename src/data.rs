@@ -34,6 +34,7 @@ impl DataPoints {
 
 struct DataPointsInner {
     sets: [BoundedMultiSet; 8],
+    last: Option<f64>,
 }
 
 impl Default for DataPointsInner {
@@ -49,6 +50,7 @@ impl Default for DataPointsInner {
                 BoundedMultiSet::new(10_000_000),
                 BoundedMultiSet::new(100_000_000),
             ],
+            last: None,
         }
     }
 }
@@ -60,6 +62,7 @@ impl DataPointsInner {
                 set.insert(*value);
             }
         }
+        self.last = values.last().copied();
     }
 
     fn get(&self, k: u8) -> Result<Stats, InvalidParams> {
@@ -70,6 +73,7 @@ impl DataPointsInner {
         Ok(Stats {
             min: self.sets[k].min(),
             max: self.sets[k].max(),
+            last: self.last,
             ..Stats::default()
         })
     }
